@@ -48,7 +48,7 @@ const Hero = () => (
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-        <BtnPrimary href="#contacto" className="w-full sm:w-auto">Pedir comida <ArrowRight /></BtnPrimary>
+        <BtnPrimary href="/restaurants" className="w-full sm:w-auto">Pedir comida <ArrowRight /></BtnPrimary>
         <BtnSecondary href="#como-funciona" className="w-full sm:w-auto">¿Cómo funciona?</BtnSecondary>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import CatFaceSVG from "./CatFaceSVG";
 
 const Navbar = () => {
@@ -65,14 +66,14 @@ const Navbar = () => {
 
       {/* CTA */}
       <div>
-        <a
-          href="#contacto"
+        <Link
+          href="/restaurants"
           className="text-xs md:text-sm font-medium text-white px-4 md:px-5 py-2 md:py-2.5 rounded-full
                      bg-[var(--color-suido-cat)] hover:bg-[var(--color-suido-accent)]
                      transition-colors duration-200"
         >
           Ordenar ahora
-        </a>
+        </Link>
       </div>
     </nav>
   );
