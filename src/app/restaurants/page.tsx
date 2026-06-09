@@ -8,12 +8,7 @@ interface Restaurant {
   id: number;
   name: string;
   category: string;
-  image?: string;
-  imageUrl?: string;
-}
-
-function getImage(r: Restaurant): string | null {
-  return r.image || r.imageUrl || null;
+  photoUrl?: string;
 }
 
 export default function RestaurantsPage() {
@@ -24,11 +19,13 @@ export default function RestaurantsPage() {
   const fetchRestaurants = useCallback(async (search: string) => {
     setLoading(true);
     try {
+      const base = process.env.NEXT_PUBLIC_API_URL;
       const url = search
-        ? `http://localhost:8080/api/restaurants/search?name=${encodeURIComponent(search)}`
-        : "http://localhost:8080/api/restaurants";
+        ? `${base}/api/restaurants/search?name=${encodeURIComponent(search)}`
+        : `${base}/api/restaurants`;
       const res  = await fetch(url);
-      const data = await res.json();
+      const json = await res.json();
+      const data = json?.data ?? json;
       setRestaurants(Array.isArray(data) ? data : []);
     } catch {
       setRestaurants([]);
@@ -141,7 +138,7 @@ export default function RestaurantsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {restaurants.map((r) => {
-              const img = getImage(r);
+              const img = r.photoUrl || null;
               return (
                 <div
                   key={r.id}
