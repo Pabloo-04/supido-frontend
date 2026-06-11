@@ -140,12 +140,13 @@ export default function RestaurantsPage() {
             {restaurants.map((r) => {
               const img = r.photoUrl || null;
               return (
-                <div
+                <Link
                   key={r.id}
+                  href={`/restaurants/${r.id}`}
                   className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20
-                             rounded-2xl overflow-hidden cursor-pointer
+                             rounded-2xl overflow-hidden
                              hover:-translate-y-1 hover:border-[var(--color-suido-3)]/50
-                             transition-all duration-200"
+                             transition-all duration-200 block"
                 >
                   <div className="relative h-44 overflow-hidden bg-[var(--color-suido-2)]">
                     {img ? (
@@ -173,7 +174,7 @@ export default function RestaurantsPage() {
                       {r.category}
                     </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
