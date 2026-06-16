@@ -26,7 +26,7 @@ export default function RestaurantsPage() {
       const res  = await fetch(url);
       const json = await res.json();
       const data = json?.data ?? json;
-      setRestaurants(Array.isArray(data) ? data : []);
+      setRestaurants(Array.isArray(data.content) ? data.content : []);
     } catch {
       setRestaurants([]);
     } finally {
