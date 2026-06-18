@@ -8,13 +8,15 @@ import CatFaceSVG from "../components/landing/CatFaceSVG";
 import RestaurantsSection from "../components/admin/RestaurantsSection";
 import UsersSection from "../components/admin/UsersSection";
 import DriversSection from "../components/admin/DriversSection";
+import DriversMapSection from "../components/admin/DriversMapSection";
 
-type Tab = "restaurants" | "users" | "drivers";
+type Tab = "restaurants" | "users" | "drivers" | "map";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "restaurants", label: "Restaurantes" },
   { id: "users",       label: "Usuarios" },
   { id: "drivers",     label: "Repartidores" },
+  { id: "map",         label: "Mapa en vivo" },
 ];
 
 export default function AdminPage() {
@@ -127,6 +129,7 @@ export default function AdminPage() {
         {activeTab === "restaurants" && <RestaurantsSection />}
         {activeTab === "users"       && <UsersSection />}
         {activeTab === "drivers"     && <DriversSection />}
+        {activeTab === "map"         && <DriversMapSection />}
       </div>
     </main>
   );
