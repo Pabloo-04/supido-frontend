@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken, removeToken } from "@/lib/auth";
+import { getRole, getToken, removeToken } from "@/lib/auth";
 import CatFaceSVG from "./CatFaceSVG";
 
 const Navbar = () => {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [isDriver, setIsDriver] = useState(false);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -19,6 +20,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setLoggedIn(Boolean(getToken()));
+    setIsDriver(getRole() === "DRIVER");
   }, []);
 
   function handleLogout() {
@@ -112,12 +114,12 @@ const Navbar = () => {
           </>
         )}
         <Link
-          href="/restaurants"
+          href={isDriver ? "/driver" : "/restaurants"}
           className="text-xs md:text-sm font-medium text-white px-4 md:px-5 py-2 md:py-2.5 rounded-full
                      bg-[var(--color-suido-cat)] hover:bg-[var(--color-suido-accent)]
                      transition-colors duration-200"
         >
-          Ordenar ahora
+          {isDriver ? "Ver pedidos" : "Ordenar ahora"}
         </Link>
       </div>
     </nav>

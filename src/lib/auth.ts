@@ -40,7 +40,7 @@ export async function register(
   return res.json();
 }
 
-export const TOKEN_KEY = process.env.NEXT_PUBLIC_TOKEN_KEY as string;
+export const TOKEN_KEY = "access_token";
 
 export function saveToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token);
@@ -53,4 +53,32 @@ export function getToken(): string | null {
 
 export function removeToken() {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+interface TokenPayload {
+  role?: string;
+  userId?: number;
+  [key: string]: unknown;
+}
+
+function decodeToken(token: string): TokenPayload | null {
+  try {
+    const payload = token.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+export function getRole(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  return decodeToken(token)?.role ?? null;
+}
+
+export function getUserId(): number | null {
+  const token = getToken();
+  if (!token) return null;
+  return decodeToken(token)?.userId ?? null;
 }

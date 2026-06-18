@@ -23,8 +23,7 @@ export default function RegisterPage() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError(null);
 
     const errors: Partial<typeof form> = {
@@ -107,7 +106,7 @@ export default function RegisterPage() {
           Unite a Supido hoy
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={(e) => { e.preventDefault(); void handleSubmit(); }} className="flex flex-col gap-4">
           {fields.map(({ name, label, type, placeholder, autoComplete }) => (
             <div key={name} className="flex flex-col gap-1.5">
               <label

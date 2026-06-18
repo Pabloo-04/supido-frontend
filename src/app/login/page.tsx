@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { login, saveToken } from "@/lib/auth";
+import { getRole, login, saveToken } from "@/lib/auth";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
 
@@ -15,8 +15,7 @@ export default function LoginPage() {
   const [error, setError]       = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError(null);
 
     const errors = {
@@ -30,7 +29,9 @@ export default function LoginPage() {
     try {
       const { token } = await login(username, password);
       saveToken(token);
-      router.push("/restaurants");
+      const role = getRole();
+      const dest = role === "DRIVER" ? "/driver" : role === "ROLE_ADMIN" ? "/admin" : "/restaurants";
+      router.push(dest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
     } finally {
@@ -85,7 +86,7 @@ export default function LoginPage() {
           Bienvenido de vuelta
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={(e) => { e.preventDefault(); void handleSubmit(); }} className="flex flex-col gap-4">
 
           <div className="flex flex-col gap-1.5">
             <label
