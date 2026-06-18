@@ -24,7 +24,7 @@ export function useDriversMap(): Map<number, DriverPin> {
     });
 
     client.onConnect = () => {
-      client.subscribe("/topic/drivers/locations", (frame) => {
+      client.subscribe("/topic/drivers/all", (frame) => {
         try {
           const update: DriverPin = JSON.parse(frame.body);
           setPins((prev) => new Map(prev).set(update.deliveryPersonId, update));

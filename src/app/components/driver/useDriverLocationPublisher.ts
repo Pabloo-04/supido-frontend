@@ -15,26 +15,30 @@ export function useDriverLocationPublisher(deliveryPersonId: number | null, enab
       reconnectDelay: 5000,
     });
 
+    let watchId: number | null = null;
+
+    client.onConnect = () => {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!client.connected) return;
+          client.publish({
+            destination: "/app/driver/location",
+            body: JSON.stringify({
+              deliveryPersonId,
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            }),
+          });
+        },
+        console.error,
+        { enableHighAccuracy: true, maximumAge: 5000 },
+      );
+    };
+
     client.activate();
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        if (!client.connected) return;
-        client.publish({
-          destination: "/app/driver/location",
-          body: JSON.stringify({
-            deliveryPersonId,
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          }),
-        });
-      },
-      console.error,
-      { enableHighAccuracy: true, maximumAge: 5000 },
-    );
-
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       client.deactivate();
     };
   }, [deliveryPersonId, enabled]);
