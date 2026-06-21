@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getRole } from "@/lib/auth";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
 
 interface Restaurant {
@@ -12,9 +14,14 @@ interface Restaurant {
 }
 
 export default function RestaurantsPage() {
+  const router = useRouter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [query, setQuery]             = useState("");
   const [loading, setLoading]         = useState(true);
+
+  useEffect(() => {
+    if (getRole() === "DRIVER") router.push("/driver");
+  }, [router]);
 
   const fetchRestaurants = useCallback(async (search: string) => {
     setLoading(true);
@@ -26,7 +33,7 @@ export default function RestaurantsPage() {
       const res  = await fetch(url);
       const json = await res.json();
       const data = json?.data ?? json;
-      setRestaurants(Array.isArray(data) ? data : []);
+      setRestaurants(Array.isArray(data.content) ? data.content : []);
     } catch {
       setRestaurants([]);
     } finally {

@@ -2,16 +2,32 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getRole, getToken, removeToken } from "@/lib/auth";
 import CatFaceSVG from "./CatFaceSVG";
 
 const Navbar = () => {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [isDriver, setIsDriver] = useState(false);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  useEffect(() => {
+    setLoggedIn(Boolean(getToken()));
+    setIsDriver(getRole() === "DRIVER");
+  }, []);
+
+  function handleLogout() {
+    removeToken();
+    setLoggedIn(false);
+    router.push("/login");
+  }
 
   return (
     <nav
@@ -65,14 +81,45 @@ const Navbar = () => {
       </ul>
 
       {/* CTA */}
-      <div>
+      <div className="flex items-center gap-2 md:gap-3">
+        {loggedIn ? (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="text-xs md:text-sm font-medium text-white
+                       px-3 md:px-5 py-2 md:py-2.5 rounded-full
+                       border border-[var(--color-suido-3)]/40 hover:border-[var(--color-suido-accent)]
+                       transition-colors duration-200"
+          >
+            Cerrar sesión
+          </button>
+        ) : (
+          <>
+            <Link
+              href="/login"
+              className="text-xs md:text-sm font-medium text-[var(--color-suido-4)]
+                         hover:text-white px-3 md:px-4 py-2 rounded-full transition-colors duration-200"
+            >
+              Ingresar
+            </Link>
+            <Link
+              href="/register"
+              className="text-xs md:text-sm font-medium text-white
+                         px-3 md:px-5 py-2 md:py-2.5 rounded-full
+                         border border-[var(--color-suido-3)]/40 hover:border-[var(--color-suido-accent)]
+                         transition-colors duration-200"
+            >
+              Registrarse
+            </Link>
+          </>
+        )}
         <Link
-          href="/restaurants"
-          className="text-xs md:text-sm font-medium text-white px-4 md:px-5 py-2 md:py-2.5 rounded-full
+          href={isDriver ? "/driver" : "/restaurants"}
+          className="text-xs md:text-sm font-medium text-white px-3 md:px-5 py-2 md:py-2.5 rounded-full
                      bg-[var(--color-suido-cat)] hover:bg-[var(--color-suido-accent)]
                      transition-colors duration-200"
         >
-          Ordenar ahora
+          {isDriver ? "Ver pedidos" : "Ordenar ahora"}
         </Link>
       </div>
     </nav>
