@@ -26,7 +26,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     const token = getToken();
-    if (!token || getRole() !== "ROLE_ADMIN") {
+    if (!token || getRole() !== "ROLE_SUPER") {
       router.push("/login");
       return;
     }

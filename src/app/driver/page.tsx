@@ -40,7 +40,7 @@ export default function DriverPage() {
 
   useEffect(() => {
     const token = getToken();
-    if (!token || getRole() !== "DRIVER") {
+    if (!token || getRole() !== "ROLE_DELIVERY") {
       router.push("/login");
       return;
     }

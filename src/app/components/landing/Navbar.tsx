@@ -20,7 +20,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setLoggedIn(Boolean(getToken()));
-    setIsDriver(getRole() === "DRIVER");
+    setIsDriver(getRole() === "ROLE_DELIVERY");
   }, []);
 
   function handleLogout() {
@@ -83,16 +83,27 @@ const Navbar = () => {
       {/* CTA */}
       <div className="flex items-center gap-2 md:gap-3">
         {loggedIn ? (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs md:text-sm font-medium text-white
-                       px-3 md:px-5 py-2 md:py-2.5 rounded-full
-                       border border-[var(--color-suido-3)]/40 hover:border-[var(--color-suido-accent)]
-                       transition-colors duration-200"
-          >
-            Cerrar sesión
-          </button>
+          <>
+            {!isDriver && (
+              <Link
+                href="/orders"
+                className="text-xs md:text-sm font-medium text-[var(--color-suido-4)]
+                           hover:text-white px-3 md:px-4 py-2 rounded-full transition-colors duration-200"
+              >
+                Mis pedidos
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs md:text-sm font-medium text-white
+                         px-3 md:px-5 py-2 md:py-2.5 rounded-full
+                         border border-[var(--color-suido-3)]/40 hover:border-[var(--color-suido-accent)]
+                         transition-colors duration-200"
+            >
+              Cerrar sesión
+            </button>
+          </>
         ) : (
           <>
             <Link
