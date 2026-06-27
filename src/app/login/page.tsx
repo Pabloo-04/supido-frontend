@@ -31,7 +31,7 @@ export default function LoginPage() {
       const { token } = await login(username, password);
       saveToken(token);
       const role = getRole();
-      if (role === "ROL_DELIVERY") {
+      if (role === "ROLE_DELIVERY") {
         router.push("/driver");
       } else if (role === "ROLE_SUPER") {
         router.push("/admin");
