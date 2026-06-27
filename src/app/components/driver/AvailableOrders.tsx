@@ -2,9 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchAvailableOrders, type AvailableOrder } from "@/lib/orders";
+import { acceptOrder } from "@/lib/driver-orders";
 import OrderCard from "./OrderCard";
 
-export default function AvailableOrders() {
+interface Props {
+  onOrderAccepted?: () => void;
+}
+
+export default function AvailableOrders({ onOrderAccepted }: Props) {
   const [orders, setOrders]   = useState<AvailableOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -21,9 +26,13 @@ export default function AvailableOrders() {
     }
   }, []);
 
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+
+  async function handleAccept(orderId: number) {
+    await acceptOrder(orderId);
+    await loadOrders();
+    onOrderAccepted?.();
+  }
 
   return (
     <section>
@@ -67,7 +76,7 @@ export default function AvailableOrders() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {orders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+            <OrderCard key={order.id} order={order} onAccept={handleAccept} />
           ))}
         </div>
       )}

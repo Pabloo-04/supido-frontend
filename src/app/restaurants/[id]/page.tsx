@@ -3,6 +3,9 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import CatFaceSVG from "../../components/landing/CatFaceSVG";
+import CartDrawer from "../../components/cart/CartDrawer";
+import ConflictModal from "../../components/cart/ConflictModal";
+import { useCartStore } from "@/store/cart";
 
 interface Restaurant {
   id: number;
@@ -35,6 +38,10 @@ export default function RestaurantDetailPage({
   const [menuItems, setMenuItems]   = useState<MenuItem[]>([]);
   const [loading, setLoading]       = useState(true);
 
+  const addItem    = useCartStore((s) => s.addItem);
+  const setQuantity = useCartStore((s) => s.setQuantity);
+  const cartItems  = useCartStore((s) => s.items);
+
   useEffect(() => {
     const base = process.env.NEXT_PUBLIC_API_URL;
 
@@ -48,8 +55,9 @@ export default function RestaurantDetailPage({
         const restJson = await restRes.json();
         const menuJson = await menuRes.json();
         setRestaurant(restJson?.data ?? restJson);
-        const items = menuJson?.data ?? menuJson;
-        setMenuItems(Array.isArray(items) ? items : []);
+        const raw = menuJson?.data ?? menuJson;
+        const items = Array.isArray(raw?.content) ? raw.content : Array.isArray(raw) ? raw : [];
+        setMenuItems(items);
       } finally {
         setLoading(false);
       }
@@ -62,6 +70,16 @@ export default function RestaurantDetailPage({
     (acc[item.category] ??= []).push(item);
     return acc;
   }, {});
+
+  function handleAdd(item: MenuItem) {
+    if (!restaurant) return;
+    addItem(Number(id), restaurant.name, {
+      menuItemId: item.id,
+      name: item.name,
+      price: item.price,
+      photoUrl: item.photoUrl,
+    });
+  }
 
   return (
     <main className="min-h-screen bg-[var(--color-suido-0)]">
@@ -163,7 +181,7 @@ export default function RestaurantDetailPage({
           </div>
 
           {/* Menu */}
-          <div className="px-6 md:px-12 lg:px-16 py-10 max-w-7xl mx-auto">
+          <div className="px-6 md:px-12 lg:px-16 py-10 max-w-7xl mx-auto pb-28">
             <h2
               className="text-[1.5rem] font-extrabold text-white mb-8"
               style={{ fontFamily: "var(--font-syne)" }}
@@ -190,56 +208,106 @@ export default function RestaurantDetailPage({
                       {category}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20
-                                     rounded-2xl overflow-hidden flex flex-col"
-                        >
-                          {item.photoUrl && (
-                            <div className="h-36 overflow-hidden bg-[var(--color-suido-2)] flex-shrink-0">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={item.photoUrl}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="p-4 flex flex-col gap-1 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4
-                                className="text-white font-bold text-sm leading-snug"
-                                style={{ fontFamily: "var(--font-syne)" }}
-                              >
-                                {item.name}
-                              </h4>
-                              <span
-                                className="text-[var(--color-suido-accent)] font-bold text-sm whitespace-nowrap"
-                                style={{ fontFamily: "var(--font-syne)" }}
-                              >
-                                ${item.price.toFixed(2)}
-                              </span>
-                            </div>
-                            <p
-                              className="text-[0.78rem] text-[var(--color-suido-4)] leading-relaxed"
-                              style={{ fontFamily: "var(--font-dm)" }}
-                            >
-                              {item.description}
-                            </p>
-                            {!item.available && (
-                              <span
-                                className="mt-auto self-start text-[0.65rem] tracking-wide uppercase
-                                           bg-red-500/10 text-red-400 border border-red-500/20
-                                           rounded-full px-2.5 py-0.5"
+                      {items.map((item) => {
+                        const cartItem = cartItems.find((c) => c.menuItemId === item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20
+                                       rounded-2xl overflow-hidden flex flex-col"
+                          >
+                            {item.photoUrl && (
+                              <div className="h-36 overflow-hidden bg-[var(--color-suido-2)] flex-shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={item.photoUrl}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="p-4 flex flex-col gap-1 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4
+                                  className="text-white font-bold text-sm leading-snug"
+                                  style={{ fontFamily: "var(--font-syne)" }}
+                                >
+                                  {item.name}
+                                </h4>
+                                <span
+                                  className="text-[var(--color-suido-accent)] font-bold text-sm whitespace-nowrap"
+                                  style={{ fontFamily: "var(--font-syne)" }}
+                                >
+                                  ${item.price.toFixed(2)}
+                                </span>
+                              </div>
+                              <p
+                                className="text-[0.78rem] text-[var(--color-suido-4)] leading-relaxed"
                                 style={{ fontFamily: "var(--font-dm)" }}
                               >
-                                No disponible
-                              </span>
-                            )}
+                                {item.description}
+                              </p>
+
+                              {/* Cart controls */}
+                              <div className="mt-auto pt-3">
+                                {!item.available ? (
+                                  <span
+                                    className="text-[0.65rem] tracking-wide uppercase
+                                               bg-red-500/10 text-red-400 border border-red-500/20
+                                               rounded-full px-2.5 py-0.5"
+                                    style={{ fontFamily: "var(--font-dm)" }}
+                                  >
+                                    No disponible
+                                  </span>
+                                ) : cartItem ? (
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className="text-xs text-[var(--color-suido-4)]"
+                                      style={{ fontFamily: "var(--font-dm)" }}
+                                    >
+                                      En carrito
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setQuantity(item.id, cartItem.quantity - 1)}
+                                        className="w-7 h-7 rounded-lg bg-[var(--color-suido-2)]
+                                                   hover:bg-red-500/20 text-white text-sm font-bold
+                                                   flex items-center justify-center transition-colors"
+                                      >
+                                        −
+                                      </button>
+                                      <span
+                                        className="text-white text-sm font-bold w-5 text-center"
+                                        style={{ fontFamily: "var(--font-syne)" }}
+                                      >
+                                        {cartItem.quantity}
+                                      </span>
+                                      <button
+                                        onClick={() => setQuantity(item.id, cartItem.quantity + 1)}
+                                        className="w-7 h-7 rounded-lg bg-[var(--color-suido-2)]
+                                                   hover:bg-[var(--color-suido-cat)]/40 text-white text-sm font-bold
+                                                   flex items-center justify-center transition-colors"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleAdd(item)}
+                                    className="w-full py-2 rounded-xl text-xs font-semibold text-white
+                                               bg-[var(--color-suido-cat)]/80 hover:bg-[var(--color-suido-cat)]
+                                               transition-colors duration-200"
+                                    style={{ fontFamily: "var(--font-dm)" }}
+                                  >
+                                    + Agregar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -248,6 +316,9 @@ export default function RestaurantDetailPage({
           </div>
         </>
       )}
+
+      <CartDrawer />
+      <ConflictModal />
     </main>
   );
 }

@@ -20,7 +20,7 @@ export default function RestaurantsPage() {
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
-    if (getRole() === "DRIVER") router.push("/driver");
+    if (getRole() === "ROLE_DELIVERY") router.push("/driver");
   }, [router]);
 
   const fetchRestaurants = useCallback(async (search: string) => {

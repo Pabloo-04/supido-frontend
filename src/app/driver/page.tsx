@@ -7,40 +7,52 @@ import { getRole, getToken, getUserId } from "@/lib/auth";
 import { fetchDeliveryPersonByUserId } from "@/lib/deliveryPersons";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
 import AvailableOrders from "../components/driver/AvailableOrders";
+import ActiveOrders from "../components/driver/ActiveOrders";
+import DeliveredHistory from "../components/driver/DeliveredHistory";
 import AvailabilityToggle from "../components/driver/AvailabilityToggle";
 import { useDriverLocationPublisher } from "../components/driver/useDriverLocationPublisher";
 
+type Tab = "available" | "active" | "history";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "available", label: "Disponibles" },
+  { id: "active",    label: "Mis pedidos" },
+  { id: "history",   label: "Historial" },
+];
+
 export default function DriverPage() {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-  const [deliveryPersonId, setDeliveryPersonId] = useState<number | null>(null);
-  const [available, setAvailable] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const [authorized, setAuthorized]       = useState(false);
+  const [deliveryPersonId, setDpId]       = useState<number | null>(null);
+  const [available, setAvailable]         = useState(false);
+  const [loadingProfile, setLoadingProf]  = useState(true);
+  const [profileError, setProfileError]   = useState<string | null>(null);
+  const [tab, setTab]                     = useState<Tab>("available");
 
   const loadProfile = useCallback(async () => {
     const userId = getUserId();
     if (!userId) {
       setProfileError("No se pudo identificar al usuario.");
-      setLoadingProfile(false);
+      setLoadingProf(false);
       return;
     }
-    setLoadingProfile(true);
+    setLoadingProf(true);
     setProfileError(null);
     try {
       const profile = await fetchDeliveryPersonByUserId(userId);
-      setDeliveryPersonId(profile.id);
+      setDpId(profile.id);
       setAvailable(profile.available);
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : "Error al cargar el perfil.");
     } finally {
-      setLoadingProfile(false);
+      setLoadingProf(false);
     }
   }, []);
 
   useEffect(() => {
     const token = getToken();
-    if (!token || getRole() !== "DRIVER") {
+    if (!token || getRole() !== "ROLE_DELIVERY") {
       router.push("/login");
       return;
     }
@@ -98,8 +110,9 @@ export default function DriverPage() {
         )}
       </nav>
 
-      {/* Page content */}
-      <div className="pt-28 pb-16 px-6 md:px-12 lg:px-16 max-w-7xl mx-auto">
+      {/* Content */}
+      <div className="pt-24 pb-16 px-6 md:px-12 lg:px-16 max-w-7xl mx-auto">
+
         {profileError && (
           <p
             className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-2.5 mb-6"
@@ -108,12 +121,48 @@ export default function DriverPage() {
             {profileError}
           </p>
         )}
+
         {loadingProfile ? (
           <div className="flex justify-center items-center py-24">
             <div className="w-8 h-8 rounded-full border-2 border-[var(--color-suido-accent)] border-t-transparent animate-spin" />
           </div>
         ) : (
-          <AvailableOrders />
+          <>
+            {/* Tab bar */}
+            <div
+              className="flex gap-1 mb-8 bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20
+                         rounded-2xl p-1 w-fit"
+            >
+              {TABS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors duration-150
+                    ${tab === id
+                      ? "bg-[var(--color-suido-cat)] text-white"
+                      : "text-[var(--color-suido-4)] hover:text-white"
+                    }`}
+                  style={{ fontFamily: "var(--font-dm)" }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab panels */}
+            {tab === "available" && (
+              <AvailableOrders
+                onOrderAccepted={() => setTab("active")}
+              />
+            )}
+            {tab === "active" && deliveryPersonId && (
+              <ActiveOrders deliveryPersonId={deliveryPersonId} />
+            )}
+            {tab === "history" && deliveryPersonId && (
+              <DeliveredHistory deliveryPersonId={deliveryPersonId} />
+            )}
+          </>
         )}
       </div>
     </main>

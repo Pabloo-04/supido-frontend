@@ -1,5 +1,7 @@
-const CatCtaSVG = ({ className = "" }) => (
-  <svg className={className} viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+import type { CSSProperties } from "react";
+
+const CatCtaSVG = ({ className = "", style }: { className?: string; style?: CSSProperties }) => (
+  <svg className={className} style={style} viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
     <title>Logo de Supido Delivery — cara de gato</title>
     <ellipse cx="105" cy="105" rx="50" ry="38" fill="#6B2FCC" />
     <circle cx="72"  cy="78"  r="40" fill="#7B3FDC" />

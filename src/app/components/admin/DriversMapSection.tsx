@@ -10,8 +10,11 @@ import { useDriversMap } from "./useDriversMap";
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 
-// Buenos Aires as default centre — map re-centres automatically once pins arrive
-const DEFAULT_CENTER = { lat: -34.6037, lng: -58.3816 };
+ 
+
+
+
+const DEFAULT_CENTER = { lat: 13.690026, lng: -89.234408};
 
 export default function DriversMapSection() {
   const pins = useDriversMap();

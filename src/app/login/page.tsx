@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getRole, login, saveToken } from "@/lib/auth";
+import { getRole, getToken, login, saveToken } from "@/lib/auth";
+import { fetchAddresses } from "@/lib/addresses";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
 
@@ -30,8 +31,16 @@ export default function LoginPage() {
       const { token } = await login(username, password);
       saveToken(token);
       const role = getRole();
-      const dest = role === "DRIVER" ? "/driver" : role === "ROLE_ADMIN" ? "/admin" : "/restaurants";
-      router.push(dest);
+      if (role === "ROLE_DELIVERY") {
+        router.push("/driver");
+      } else if (role === "ROLE_SUPER") {
+        router.push("/admin");
+      } else if (role === "ROLE_RESTAURANT") {
+        router.push("/restaurant");
+      } else {
+        const addresses = await fetchAddresses(getToken()!).catch(() => []);
+        router.push(addresses.length === 0 ? "/setup-address" : "/restaurants");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
     } finally {
