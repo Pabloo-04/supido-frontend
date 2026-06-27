@@ -35,6 +35,8 @@ export default function LoginPage() {
         router.push("/driver");
       } else if (role === "ROLE_SUPER") {
         router.push("/admin");
+      } else if (role === "ROLE_RESTAURANT") {
+        router.push("/restaurant");
       } else {
         const addresses = await fetchAddresses(getToken()!).catch(() => []);
         router.push(addresses.length === 0 ? "/setup-address" : "/restaurants");

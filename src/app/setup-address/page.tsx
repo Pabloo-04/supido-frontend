@@ -13,9 +13,10 @@ import {
 import { getToken } from "@/lib/auth";
 import { createAddress } from "@/lib/addresses";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
+ 
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
-const DEFAULT_CENTER = { lat: -34.6037, lng: -58.3816 };
+const DEFAULT_CENTER = { lat: 13.690026, lng: -89.234408};
 
 export default function SetupAddressPage() {
   const router = useRouter();

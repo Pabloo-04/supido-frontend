@@ -9,8 +9,9 @@ import CatFaceSVG from "./CatFaceSVG";
 const Navbar = () => {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [isDriver, setIsDriver] = useState(false);
+  const [loggedIn, setLoggedIn]         = useState(false);
+  const [isDriver, setIsDriver]         = useState(false);
+  const [isRestaurant, setIsRestaurant] = useState(false);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -19,8 +20,10 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    const role = getRole();
     setLoggedIn(Boolean(getToken()));
-    setIsDriver(getRole() === "ROLE_DELIVERY");
+    setIsDriver(role === "ROLE_DELIVERY");
+    setIsRestaurant(role === "ROLE_RESTAURANT");
   }, []);
 
   function handleLogout() {
@@ -84,7 +87,7 @@ const Navbar = () => {
       <div className="flex items-center gap-2 md:gap-3">
         {loggedIn ? (
           <>
-            {!isDriver && (
+            {!isDriver && !isRestaurant && (
               <Link
                 href="/orders"
                 className="text-xs md:text-sm font-medium text-[var(--color-suido-4)]
@@ -125,12 +128,12 @@ const Navbar = () => {
           </>
         )}
         <Link
-          href={isDriver ? "/driver" : "/restaurants"}
+          href={isDriver ? "/driver" : isRestaurant ? "/restaurant" : "/restaurants"}
           className="text-xs md:text-sm font-medium text-white px-3 md:px-5 py-2 md:py-2.5 rounded-full
                      bg-[var(--color-suido-cat)] hover:bg-[var(--color-suido-accent)]
                      transition-colors duration-200"
         >
-          {isDriver ? "Ver pedidos" : "Ordenar ahora"}
+          {isDriver ? "Ver pedidos" : isRestaurant ? "Mi restaurante" : "Ordenar ahora"}
         </Link>
       </div>
     </nav>
