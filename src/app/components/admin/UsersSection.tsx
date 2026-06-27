@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchAllUsers, type User } from "@/lib/admin";
+import CreateUserForm from "./CreateUserForm";
 
 const ROLE_FILTERS: { label: string; value: string | undefined }[] = [
   { label: "Todos",         value: undefined },
@@ -35,6 +36,7 @@ export default function UsersSection() {
   const [page, setPage]               = useState(0);
   const [totalPages, setTotalPages]   = useState(1);
   const [totalElements, setTotal]     = useState(0);
+  const [showForm, setShowForm]       = useState(false);
 
   const load = useCallback(async (p: number, role: string | undefined) => {
     setLoading(true);
@@ -76,17 +78,38 @@ export default function UsersSection() {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => load(page, roleFilter)}
-          className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white
-                     px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30
-                     transition-colors duration-200"
-          style={{ fontFamily: "var(--font-dm)" }}
-        >
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors duration-200
+              ${showForm
+                ? "border-[var(--color-suido-3)]/30 text-[var(--color-suido-4)] hover:text-white"
+                : "bg-[var(--color-suido-cat)] border-[var(--color-suido-cat)] text-white hover:bg-[var(--color-suido-accent)] hover:border-[var(--color-suido-accent)]"
+              }`}
+            style={{ fontFamily: "var(--font-dm)" }}
+          >
+            {showForm ? "Cancelar" : "+ Crear usuario"}
+          </button>
+          <button
+            type="button"
+            onClick={() => load(page, roleFilter)}
+            className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white
+                       px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30
+                       transition-colors duration-200"
+            style={{ fontFamily: "var(--font-dm)" }}
+          >
+            Actualizar
+          </button>
+        </div>
       </div>
+
+      {showForm && (
+        <CreateUserForm
+          onCreated={() => { setShowForm(false); setPage(0); load(0, roleFilter); }}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
 
       {/* Role filter tabs */}
       <div className="flex flex-wrap gap-2">

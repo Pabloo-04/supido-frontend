@@ -112,6 +112,23 @@ export async function fetchAllUsers(
   };
 }
 
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email: string;
+  phone?: string;
+  role: string;
+}
+
+export async function createUser(data: CreateUserRequest): Promise<User> {
+  const res = await fetch(`${BASE}/api/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  return unwrap<User>(res);
+}
+
 export async function fetchAllDeliveryPersons(): Promise<DeliveryPerson[]> {
   const res = await fetch(`${BASE}/api/delivery-persons`, { headers: authHeaders() });
   const json = await unwrap<{ content?: DeliveryPerson[] } | DeliveryPerson[]>(res);
