@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   APIProvider,
@@ -19,7 +19,10 @@ const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 const DEFAULT_CENTER = { lat: 13.690026, lng: -89.234408};
 
 export default function SetupAddressPage() {
-  const router = useRouter();
+  const router     = useRouter();
+  const params     = useSearchParams();
+  const nextRoute  = params.get("next") ?? "/restaurants";
+
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
   const [label, setLabel] = useState("");
   const [street, setStreet] = useState("");
@@ -52,7 +55,7 @@ export default function SetupAddressPage() {
         latitude: picked.lat,
         longitude: picked.lng,
       });
-      router.push("/restaurants");
+      router.push(nextRoute);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar la dirección.");
     } finally {
@@ -190,6 +193,18 @@ export default function SetupAddressPage() {
               "Guardar dirección"
             )}
           </button>
+
+          {nextRoute !== "/checkout" && (
+            <button
+              type="button"
+              onClick={() => router.push("/restaurants")}
+              className="w-full py-2.5 text-sm text-[var(--color-suido-4)] hover:text-white
+                         transition-colors duration-200"
+              style={{ fontFamily: "var(--font-dm)" }}
+            >
+              Omitir por ahora
+            </button>
+          )}
         </form>
       </div>
     </main>

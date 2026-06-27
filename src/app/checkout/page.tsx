@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
@@ -41,14 +40,18 @@ export default function CheckoutPage() {
 
     fetchAddresses(token)
       .then((addrs) => {
+        if (addrs.length === 0) {
+          router.push("/setup-address?next=/checkout");
+          return;
+        }
         setAddresses(addrs);
-        if (addrs.length > 0) setAddressId(addrs[0].id);
+        setAddressId(addrs[0].id);
       })
       .catch(() => setError("No se pudieron cargar las direcciones."))
       .finally(() => setLoadingAddr(false));
   }, [mounted, items.length, router]);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!addressId || restaurantId === null) return;
     const token = getToken();
