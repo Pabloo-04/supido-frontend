@@ -33,6 +33,7 @@ export interface User {
   email: string;
   phone?: string;
   role?: string;
+  createdAt?: string;
 }
 
 export interface DeliveryPerson {
@@ -85,14 +86,47 @@ export async function createMenuItem(
   return unwrap<MenuItem>(res);
 }
 
-export async function fetchAllUsers(): Promise<User[]> {
-  const res = await fetch(`${BASE}/api/users`, { headers: authHeaders() });
-  const json = await unwrap<{ content?: User[] } | User[]>(res);
-  return Array.isArray(json)
-    ? json
-    : Array.isArray((json as { content?: User[] }).content)
-      ? (json as { content: User[] }).content
-      : [];
+export interface UserPage {
+  users: User[];
+  totalPages: number;
+  totalElements: number;
+}
+
+export async function fetchAllUsers(
+  page = 0,
+  size = 10,
+  role?: string,
+): Promise<UserPage> {
+  const qs = new URLSearchParams({ page: String(page), size: String(size) });
+  if (role) qs.set("role", role);
+  const res = await fetch(`${BASE}/api/users?${qs}`, { headers: authHeaders() });
+  const json = await unwrap<
+    { content?: User[]; totalPages?: number; totalElements?: number } | User[]
+  >(res);
+  if (Array.isArray(json)) return { users: json, totalPages: 1, totalElements: json.length };
+  const paged = json as { content?: User[]; totalPages?: number; totalElements?: number };
+  return {
+    users: Array.isArray(paged.content) ? paged.content : [],
+    totalPages: paged.totalPages ?? 1,
+    totalElements: paged.totalElements ?? 0,
+  };
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email: string;
+  phone?: string;
+  role: string;
+}
+
+export async function createUser(data: CreateUserRequest): Promise<User> {
+  const res = await fetch(`${BASE}/api/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  return unwrap<User>(res);
 }
 
 export async function fetchAllDeliveryPersons(): Promise<DeliveryPerson[]> {
