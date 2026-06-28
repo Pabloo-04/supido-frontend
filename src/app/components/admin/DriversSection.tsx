@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchAllDeliveryPersons, type DeliveryPerson } from "@/lib/admin";
+import CreateDriverForm from "./CreateDriverForm";
 
 export default function DriversSection() {
-  const [drivers, setDrivers] = useState<DeliveryPerson[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [drivers, setDrivers]   = useState<DeliveryPerson[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const loadDrivers = useCallback(async () => {
     setLoading(true);
@@ -22,26 +24,52 @@ export default function DriversSection() {
 
   useEffect(() => { loadDrivers(); }, [loadDrivers]);
 
+  function handleCreated(driver: DeliveryPerson) {
+    setShowForm(false);
+    setDrivers((prev) => [driver, ...prev]);
+  }
+
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2
           className="text-xl font-extrabold text-white"
           style={{ fontFamily: "var(--font-syne)" }}
         >
           Repartidores
         </h2>
-        <button
-          type="button"
-          onClick={loadDrivers}
-          className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white
-                     px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30
-                     transition-colors duration-200"
-          style={{ fontFamily: "var(--font-dm)" }}
-        >
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors duration-200
+              ${showForm
+                ? "border-[var(--color-suido-3)]/30 text-[var(--color-suido-4)] hover:text-white"
+                : "bg-[var(--color-suido-cat)] border-[var(--color-suido-cat)] text-white hover:bg-[var(--color-suido-accent)] hover:border-[var(--color-suido-accent)]"
+              }`}
+            style={{ fontFamily: "var(--font-dm)" }}
+          >
+            {showForm ? "Cancelar" : "+ Nuevo repartidor"}
+          </button>
+          <button
+            type="button"
+            onClick={loadDrivers}
+            className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white
+                       px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30
+                       transition-colors duration-200"
+            style={{ fontFamily: "var(--font-dm)" }}
+          >
+            Actualizar
+          </button>
+        </div>
       </div>
+
+      {showForm && (
+        <CreateDriverForm
+          onCreated={handleCreated}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20">
@@ -74,7 +102,7 @@ export default function DriversSection() {
                   className="text-[0.72rem] text-[var(--color-suido-3)] mt-0.5"
                   style={{ fontFamily: "var(--font-dm)" }}
                 >
-                  ID: {d.id}{d.userId ? ` · Usuario ${d.userId}` : ""}
+                  ID: {d.id}{d.userId ? ` · Usuario #${d.userId}` : ""}
                 </p>
               </div>
 

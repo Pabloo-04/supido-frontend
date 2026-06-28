@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchAllUsers, type User } from "@/lib/admin";
+import { fetchAllUsers, deleteUser, type User } from "@/lib/admin";
 import CreateUserForm from "./CreateUserForm";
+import EditUserForm from "./EditUserForm";
 
 const ROLE_FILTERS: { label: string; value: string | undefined }[] = [
   { label: "Todos",         value: undefined },
@@ -13,20 +14,21 @@ const ROLE_FILTERS: { label: string; value: string | undefined }[] = [
 ];
 
 const ROLE_BADGE: Record<string, string> = {
-  ROLE_USER:         "bg-purple-500/15 text-purple-400 border-purple-500/25",
-  ROLE_DELIVERY:     "bg-green-500/15 text-green-400 border-green-500/25",
-  ROLE_RESTAURANT:   "bg-orange-500/15 text-orange-400 border-orange-500/25",
-  ROLE_SUPER:        "bg-red-500/15 text-red-400 border-red-500/25",
+  ROLE_USER:        "bg-purple-500/15 text-purple-400 border-purple-500/25",
+  ROLE_DELIVERY:    "bg-green-500/15 text-green-400 border-green-500/25",
+  ROLE_RESTAURANT:  "bg-orange-500/15 text-orange-400 border-orange-500/25",
+  ROLE_SUPER:       "bg-red-500/15 text-red-400 border-red-500/25",
 };
 
 const ROLE_LABEL: Record<string, string> = {
-  ROLE_USER:         "Usuario",
-  ROLE_DELIVERY:     "Repartidor",
-  ROLE_RESTAURANT:   "Restaurante",
-  ROLE_SUPER:        "Admin",
+  ROLE_USER:        "Usuario",
+  ROLE_DELIVERY:    "Repartidor",
+  ROLE_RESTAURANT:  "Restaurante",
+  ROLE_SUPER:       "Admin",
 };
 
 const PAGE_SIZE = 10;
+const COLS = "3rem 1fr 1.5fr 1.2fr 1fr 1.2fr 9rem";
 
 export default function UsersSection() {
   const [users, setUsers]             = useState<User[]>([]);
@@ -36,7 +38,10 @@ export default function UsersSection() {
   const [page, setPage]               = useState(0);
   const [totalPages, setTotalPages]   = useState(1);
   const [totalElements, setTotal]     = useState(0);
-  const [showForm, setShowForm]       = useState(false);
+  const [showCreate, setShowCreate]     = useState(false);
+  const [editingUser, setEditingUser]   = useState<User | null>(null);
+  const [pendingDeleteId, setPending]   = useState<number | null>(null);
+  const [deleting, setDeleting]         = useState(false);
 
   const load = useCallback(async (p: number, role: string | undefined) => {
     setLoading(true);
@@ -53,14 +58,45 @@ export default function UsersSection() {
     }
   }, []);
 
-  useEffect(() => {
-    load(page, roleFilter);
-  }, [load, page, roleFilter]);
+  useEffect(() => { load(page, roleFilter); }, [load, page, roleFilter]);
 
   function handleFilterChange(role: string | undefined) {
     setRoleFilter(role);
     setPage(0);
   }
+
+  function openEdit(user: User) {
+    setShowCreate(false);
+    setEditingUser(user);
+  }
+
+  function openCreate() {
+    setEditingUser(null);
+    setShowCreate((v) => !v);
+  }
+
+  function handleUpdated(updated: User) {
+    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+    setEditingUser(null);
+  }
+
+  async function handleDelete(id: number) {
+    if (pendingDeleteId !== id) { setPending(id); return; }
+    setDeleting(true);
+    try {
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setTotal((t) => t - 1);
+      if (editingUser?.id === id) setEditingUser(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar el usuario.");
+    } finally {
+      setPending(null);
+      setDeleting(false);
+    }
+  }
+
+  const activeForm = showCreate ? "create" : editingUser ? "edit" : null;
 
   return (
     <section className="flex flex-col gap-6">
@@ -81,15 +117,15 @@ export default function UsersSection() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowForm((v) => !v)}
+            onClick={openCreate}
             className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors duration-200
-              ${showForm
+              ${showCreate
                 ? "border-[var(--color-suido-3)]/30 text-[var(--color-suido-4)] hover:text-white"
                 : "bg-[var(--color-suido-cat)] border-[var(--color-suido-cat)] text-white hover:bg-[var(--color-suido-accent)] hover:border-[var(--color-suido-accent)]"
               }`}
             style={{ fontFamily: "var(--font-dm)" }}
           >
-            {showForm ? "Cancelar" : "+ Crear usuario"}
+            {showCreate ? "Cancelar" : "+ Crear usuario"}
           </button>
           <button
             type="button"
@@ -104,14 +140,22 @@ export default function UsersSection() {
         </div>
       </div>
 
-      {showForm && (
+      {/* Inline forms */}
+      {activeForm === "create" && (
         <CreateUserForm
-          onCreated={() => { setShowForm(false); setPage(0); load(0, roleFilter); }}
-          onCancel={() => setShowForm(false)}
+          onCreated={() => { setShowCreate(false); setPage(0); load(0, roleFilter); }}
+          onCancel={() => setShowCreate(false)}
+        />
+      )}
+      {activeForm === "edit" && editingUser && (
+        <EditUserForm
+          user={editingUser}
+          onUpdated={handleUpdated}
+          onCancel={() => setEditingUser(null)}
         />
       )}
 
-      {/* Role filter tabs */}
+      {/* Role filter pills */}
       <div className="flex flex-wrap gap-2">
         {ROLE_FILTERS.map(({ label, value }) => (
           <button
@@ -148,11 +192,11 @@ export default function UsersSection() {
           <div className="overflow-x-auto rounded-2xl border border-[var(--color-suido-3)]/20">
             {/* Header */}
             <div
-              className="grid gap-4 px-5 py-3 min-w-[640px]
+              className="grid gap-4 px-5 py-3 min-w-[720px]
                          bg-[var(--color-suido-2)] border-b border-[var(--color-suido-3)]/20"
-              style={{ gridTemplateColumns: "3rem 1fr 1.5fr 1.2fr 1fr 1.2fr" }}
+              style={{ gridTemplateColumns: COLS }}
             >
-              {["ID", "Usuario", "Correo", "Teléfono", "Rol", "Registrado"].map((h) => (
+              {["ID", "Usuario", "Correo", "Teléfono", "Rol", "Registrado", ""].map((h) => (
                 <span
                   key={h}
                   className="text-[0.62rem] font-medium tracking-widest uppercase text-[var(--color-suido-3)]"
@@ -168,10 +212,12 @@ export default function UsersSection() {
               {users.map((u) => (
                 <div
                   key={u.id}
-                  className="grid gap-4 px-5 py-3.5 min-w-[640px]
-                             bg-[var(--color-suido-1)] hover:bg-[var(--color-suido-2)]/60
-                             transition-colors duration-150"
-                  style={{ gridTemplateColumns: "3rem 1fr 1.5fr 1.2fr 1fr 1.2fr" }}
+                  className={`grid gap-4 px-5 py-3.5 min-w-[720px] transition-colors duration-150
+                    ${editingUser?.id === u.id
+                      ? "bg-[var(--color-suido-accent)]/5"
+                      : "bg-[var(--color-suido-1)] hover:bg-[var(--color-suido-2)]/60"
+                    }`}
+                  style={{ gridTemplateColumns: COLS }}
                 >
                   <span className="text-[var(--color-suido-4)] text-sm self-center" style={{ fontFamily: "var(--font-dm)" }}>
                     #{u.id}
@@ -188,7 +234,10 @@ export default function UsersSection() {
                   <span className="self-center">
                     <span
                       className={`text-[0.62rem] tracking-wide uppercase font-semibold border rounded-full px-2.5 py-0.5 whitespace-nowrap
-                        ${u.role && ROLE_BADGE[u.role] ? ROLE_BADGE[u.role] : "bg-[var(--color-suido-3)]/15 text-[var(--color-suido-4)] border-[var(--color-suido-3)]/25"}`}
+                        ${u.role && ROLE_BADGE[u.role]
+                          ? ROLE_BADGE[u.role]
+                          : "bg-[var(--color-suido-3)]/15 text-[var(--color-suido-4)] border-[var(--color-suido-3)]/25"
+                        }`}
                       style={{ fontFamily: "var(--font-dm)" }}
                     >
                       {u.role ? (ROLE_LABEL[u.role] ?? u.role) : "—"}
@@ -196,6 +245,34 @@ export default function UsersSection() {
                   </span>
                   <span className="text-[var(--color-suido-4)] text-xs self-center" style={{ fontFamily: "var(--font-dm)" }}>
                     {u.createdAt ? new Date(u.createdAt).toLocaleDateString("es-AR") : "—"}
+                  </span>
+                  <span className="self-center flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => editingUser?.id === u.id ? setEditingUser(null) : openEdit(u)}
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors duration-150
+                        ${editingUser?.id === u.id
+                          ? "border-[var(--color-suido-3)]/30 text-[var(--color-suido-4)] hover:text-white"
+                          : "border-[var(--color-suido-accent)]/30 text-[var(--color-suido-accent)] hover:bg-[var(--color-suido-accent)]/10"
+                        }`}
+                      style={{ fontFamily: "var(--font-dm)" }}
+                    >
+                      {editingUser?.id === u.id ? "✕" : "Editar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => pendingDeleteId === u.id ? handleDelete(u.id) : setPending(u.id)}
+                      disabled={deleting && pendingDeleteId === u.id}
+                      onBlur={() => { if (pendingDeleteId === u.id) setPending(null); }}
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors duration-150
+                        ${pendingDeleteId === u.id
+                          ? "border-red-500/50 bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                          : "border-[var(--color-suido-3)]/30 text-[var(--color-suido-4)] hover:border-red-500/40 hover:text-red-400"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      style={{ fontFamily: "var(--font-dm)" }}
+                    >
+                      {deleting && pendingDeleteId === u.id ? "…" : pendingDeleteId === u.id ? "¿Borrar?" : "Borrar"}
+                    </button>
                   </span>
                 </div>
               ))}
