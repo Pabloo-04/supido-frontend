@@ -120,6 +120,43 @@ export interface CreateUserRequest {
   role: string;
 }
 
+export interface UpdateUserRequest {
+  username?: string;
+  password?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+}
+
+export async function updateUser(id: number, data: UpdateUserRequest): Promise<User> {
+  const res = await fetch(`${BASE}/api/users/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  return unwrap<User>(res);
+}
+
+export async function changeUserRole(id: number, role: string): Promise<User> {
+  const res = await fetch(`${BASE}/api/users/${id}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ role }),
+  });
+  return unwrap<User>(res);
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/api/users/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? `Error ${res.status}`);
+  }
+}
+
 export async function createUser(data: CreateUserRequest): Promise<User> {
   const res = await fetch(`${BASE}/api/users`, {
     method: "POST",
@@ -127,6 +164,15 @@ export async function createUser(data: CreateUserRequest): Promise<User> {
     body: JSON.stringify(data),
   });
   return unwrap<User>(res);
+}
+
+export async function createDeliveryPerson(userId: number): Promise<DeliveryPerson> {
+  const res = await fetch(`${BASE}/api/delivery-persons`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ userId, available: false }),
+  });
+  return unwrap<DeliveryPerson>(res);
 }
 
 export async function fetchAllDeliveryPersons(): Promise<DeliveryPerson[]> {
