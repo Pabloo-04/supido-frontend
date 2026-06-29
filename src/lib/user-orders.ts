@@ -107,6 +107,22 @@ export async function getDeliveryStats(orderId: number): Promise<DeliveryStats> 
   return unwrap<DeliveryStats>(res);
 }
 
+export interface OrderTrackingData {
+  latitude: number;
+  longitude: number;
+  deliveryPersonId?: number;
+  updatedAt?: string;
+}
+
+export async function getOrderTracking(orderId: number): Promise<OrderTrackingData | null> {
+  const res = await fetch(`${BASE}/api/order-tracking/order/${orderId}`, {
+    headers: authHeaders(),
+  });
+  if (res.status === 404 || !res.ok) return null;
+  const json = await res.json();
+  return json?.data ?? json;
+}
+
 export async function getMyOrders(
   userId: number,
   page = 0,

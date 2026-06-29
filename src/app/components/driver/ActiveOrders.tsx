@@ -163,14 +163,17 @@ function ActiveOrderCard({
       </div>
 
       <div className="flex flex-col gap-1 text-sm text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
-        <p><span className="text-[var(--color-suido-3)]">Retiro:</span> {order.pickupAddress}</p>
+        <p><span className="text-[var(--color-suido-3)]">Retiro:</span> <span className="text-white font-medium">{order.restaurantName}</span> · {order.pickupAddress}</p>
         <p><span className="text-[var(--color-suido-3)]">Entrega:</span> {order.deliveryAddress}</p>
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-[var(--color-suido-3)]/15">
-        <span className="text-white font-semibold" style={{ fontFamily: "var(--font-dm)" }}>
-          ${order.total.toFixed(2)}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-[0.65rem] text-[var(--color-suido-3)] uppercase tracking-wide" style={{ fontFamily: "var(--font-dm)" }}>Total del pedido</span>
+          <span className="text-white font-extrabold text-base" style={{ fontFamily: "var(--font-syne)" }}>
+            ${order.total.toFixed(2)}
+          </span>
+        </div>
         <span
           className={`text-xs font-medium ${order.paymentMethod === "CASH" ? "text-yellow-400" : "text-blue-400"}`}
           style={{ fontFamily: "var(--font-dm)" }}

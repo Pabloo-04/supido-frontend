@@ -5,6 +5,11 @@ const BASE = process.env.NEXT_PUBLIC_API_URL;
 export interface DeliveryPerson {
   id: number;
   available: boolean;
+  userId?: number;
+  username?: string;
+  averageRating?: number;
+  latitude?: number;
+  longitude?: number;
   [key: string]: unknown;
 }
 
