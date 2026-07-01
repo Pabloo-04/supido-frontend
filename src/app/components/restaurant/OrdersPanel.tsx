@@ -38,16 +38,16 @@ export default function OrdersPanel({ restaurantId }: Props) {
   const [totalElements, setTotal]       = useState(0);
   const [expanded, setExpanded]         = useState<number | null>(null);
 
-  const load = useCallback(async (p: number, status: RestaurantOrderStatus | undefined) => {
+  const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const r = await fetchRestaurantOrders(restaurantId, p, 20, status);
+      const r = await fetchRestaurantOrders(restaurantId, page, 20, statusFilter);
       setOrders(r.orders); setTotalPages(r.totalPages); setTotal(r.totalElements);
     } catch (err) { setError(err instanceof Error ? err.message : "Error al cargar."); }
     finally { setLoading(false); }
-  }, [restaurantId]);
+  }, [restaurantId, page, statusFilter]);
 
-  useEffect(() => { load(page, statusFilter); }, [load, page, statusFilter]);
+  useEffect(() => { load(); }, [load]);
 
   function updateOrder(u: RestaurantOrder) { setOrders((p) => p.map((o) => (o.id === u.id ? u : o))); }
   function cancelLocally(id: number) { setOrders((p) => p.map((o) => (o.id === id ? { ...o, status: "CANCELLED" as RestaurantOrderStatus } : o))); }
@@ -59,7 +59,7 @@ export default function OrdersPanel({ restaurantId }: Props) {
           <h2 className="text-xl font-extrabold text-white" style={{ fontFamily: "var(--font-syne)" }}>Pedidos</h2>
           {!loading && <p className="text-xs text-[var(--color-suido-4)] mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>{totalElements} pedidos{statusFilter ? ` · ${STATUS_LABEL[statusFilter]}` : ""}</p>}
         </div>
-        <button type="button" onClick={() => load(page, statusFilter)} className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30 transition-colors" style={{ fontFamily: "var(--font-dm)" }}>Actualizar</button>
+        <button type="button" onClick={load} className="text-xs font-medium text-[var(--color-suido-4)] hover:text-white px-3 py-1.5 rounded-full border border-[var(--color-suido-3)]/30 transition-colors" style={{ fontFamily: "var(--font-dm)" }}>Actualizar</button>
       </div>
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTERS.map(({ label, value }) => (

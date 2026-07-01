@@ -260,20 +260,54 @@ export default function ActiveDelivery({ orderId, deliveryPersonId, onComplete }
 
       {/* Items */}
       {order.items && order.items.length > 0 && (
-        <div className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl p-5 flex flex-col gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-suido-4)] mb-1" style={{ fontFamily: "var(--font-dm)" }}>
+        <div className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl p-5 flex flex-col gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
             Ítems del pedido
           </p>
-          {order.items.map((item, i) => (
-            <div key={i} className="flex justify-between gap-3">
-              <span className="text-sm text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
-                <span className="text-white font-semibold">{item.quantity}×</span> {item.menuItemName}
+
+          {/* Items with unit price */}
+          <div className="flex flex-col gap-2.5">
+            {order.items.map((item, i) => (
+              <div key={i} className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm" style={{ fontFamily: "var(--font-dm)" }}>
+                    <span className="text-[var(--color-suido-accent)] font-bold">{item.quantity}×</span> {item.menuItemName}
+                  </p>
+                  <p className="text-[0.72rem] text-[var(--color-suido-4)] mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>
+                    ${item.unitPrice.toFixed(2)} c/u
+                  </p>
+                  {item.notes && (
+                    <p className="text-[0.7rem] text-[var(--color-suido-3)] italic mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>{item.notes}</p>
+                  )}
+                </div>
+                <span className="text-white text-sm whitespace-nowrap" style={{ fontFamily: "var(--font-dm)" }}>
+                  ${item.subtotal.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Cost breakdown */}
+          <div className="flex flex-col gap-1.5 pt-3 border-t border-[var(--color-suido-3)]/15">
+            {order.subtotal != null && (
+              <CostLine label="Subtotal" value={`$${order.subtotal.toFixed(2)}`} />
+            )}
+            {order.shippingCost != null && (
+              <CostLine label="Costo de envío" value={`$${order.shippingCost.toFixed(2)}`} />
+            )}
+            {order.tip != null && order.tip > 0 && (
+              <CostLine label="Propina" value={`$${order.tip.toFixed(2)}`} />
+            )}
+            {order.discount != null && order.discount > 0 && (
+              <CostLine label="Descuento" value={`−$${order.discount.toFixed(2)}`} green />
+            )}
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--color-suido-3)]/15 mt-1">
+              <span className="text-white font-extrabold text-sm" style={{ fontFamily: "var(--font-syne)" }}>Total</span>
+              <span className="text-[var(--color-suido-accent)] font-extrabold text-sm" style={{ fontFamily: "var(--font-syne)" }}>
+                ${order.total.toFixed(2)}
               </span>
-              {item.notes && (
-                <span className="text-xs text-[var(--color-suido-3)] italic" style={{ fontFamily: "var(--font-dm)" }}>{item.notes}</span>
-              )}
             </div>
-          ))}
+          </div>
         </div>
       )}
 
@@ -374,6 +408,15 @@ function ActionButton({
       {busy && <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
       {busy ? "Actualizando…" : label}
     </button>
+  );
+}
+
+function CostLine({ label, value, green }: { label: string; value: string; green?: boolean }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-xs text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>{label}</span>
+      <span className={`text-xs font-semibold ${green ? "text-green-400" : "text-white"}`} style={{ fontFamily: "var(--font-dm)" }}>{value}</span>
+    </div>
   );
 }
 
