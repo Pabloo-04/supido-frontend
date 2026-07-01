@@ -3,26 +3,22 @@
 import { useCallback, useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  APIProvider,
-  Map,
-  AdvancedMarker,
-  Pin,
-} from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 import CatFaceSVG from "../../components/landing/CatFaceSVG";
 import {
   getOrderReceipt,
   getDeliveryStats,
   getOrderTracking,
   cancelOrder,
+  getRatingsForOrder,
+  submitRating,
   type OrderReceipt,
   type DeliveryStats,
   type OrderStatus,
+  type OrderRating,
 } from "@/lib/user-orders";
-import { getToken } from "@/lib/auth";
-import { useNotificationPoller } from "@/hooks/useNotificationPoller";
+import { getToken, getUserId } from "@/lib/auth";
 import { useOrderTracking } from "@/hooks/useOrderTracking";
-import type { Notification } from "@/lib/notifications";
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 
@@ -85,108 +81,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const loadStats = useCallback(async () => {
     try {
-      const s = await getDeliveryStats(orderId);
-      setStats(s);
-    } catch { /* not yet available */ }
+      const data = await getOrderReceipt(orderId);
+      setReceipt(data);
+      if (["CONFIRMED", "PREPARING", "ON_THE_WAY", "DELIVERED"].includes(data.status)) {
+        const s = await getDeliveryStats(orderId).catch(() => null);
+        setStats(s);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar el pedido.");
+    }
   }, [orderId]);
 
-  function startStatsPolling() {
-    if (statsPollerRef.current) return;
-    statsPollerRef.current = setInterval(loadStats, 30000);
-  }
-
-  function stopStatsPolling() {
-    if (statsPollerRef.current) {
-      clearInterval(statsPollerRef.current);
-      statsPollerRef.current = null;
-    }
-  }
-
-  /* ── notification handler ── */
-
-  const handleNotification = useCallback((n: Notification) => {
-    switch (n.type) {
-      case "ORDER_RECEIVED":
-        // already on tracking screen — just inbox update
-        break;
-      case "ORDER_CONFIRMED":
-        setStatus("CONFIRMED");
-        addToast("El restaurante aceptó tu pedido", "success");
-        loadStats();
-        startStatsPolling();
-        break;
-      case "ORDER_CANCELLED":
-        setStatus("CANCELLED");
-        stopStatsPolling();
-        setTracking(false);
-        setShowCancelled(true);
-        break;
-      case "ORDER_PREPARING":
-        setStatus("PREPARING");
-        addToast("Tu comida está siendo preparada", "info");
-        break;
-      case "DELIVERY_ASSIGNED":
-        addToast("Se asignó un repartidor a tu pedido", "info");
-        loadStats();
-        startStatsPolling();
-        getOrderTracking(orderId)
-          .then((pos) => { if (pos) setDriverInitPos({ lat: pos.latitude, lng: pos.longitude }); })
-          .catch(() => {});
-        setTracking(true);
-        break;
-      case "ORDER_ON_THE_WAY":
-        setStatus("ON_THE_WAY");
-        addToast("Tu pedido fue recogido y está en camino", "info");
-        break;
-      case "DELIVERY_NEARBY":
-        setShowNearby(true);
-        break;
-      case "ORDER_DELIVERED":
-        setStatus("DELIVERED");
-        stopStatsPolling();
-        setTracking(false);
-        setShowRating(true);
-        break;
-      case "RATE_YOUR_ORDER":
-        setShowRating(true);
-        break;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadStats, orderId]);
-
-  /* ── initial load ── */
-
+  // Load receipt once on mount — status updates come from notifications / WS
   useEffect(() => {
     const token = getToken();
     if (!token) { router.push("/login"); return; }
 
-    getOrderReceipt(orderId)
-      .then((r) => {
-        setReceipt(r);
-        setStatus(r.status);
-        if (["ON_THE_WAY", "DELIVERED"].includes(r.status)) {
-          getDeliveryStats(orderId).then(setStats).catch(() => {});
-        }
-        if (["ON_THE_WAY"].includes(r.status)) {
-          getOrderTracking(orderId)
-            .then((pos) => { if (pos) setDriverInitPos({ lat: pos.latitude, lng: pos.longitude }); })
-            .catch(() => {});
-          setTracking(true);
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Error al cargar el pedido."))
-      .finally(() => setLoading(false));
-
-    return () => stopStatsPolling();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, router]);
-
-  /* ── notification polling ── */
-
-  const pollingActive = !!status && (ACTIVE_STATUSES.includes(status) || status === "PENDING");
-  useNotificationPoller(handleNotification, pollingActive);
-
-  /* ── cancel ── */
+  // Driver position — REST initial fetch + WebSocket live updates
+  // Active for any status where a driver is or could be moving
+  const TRACKING_STATUSES: OrderStatus[] = ["CONFIRMED", "PREPARING", "ON_THE_WAY"];
+  const trackingEnabled = receipt?.status != null && TRACKING_STATUSES.includes(receipt.status);
+  const driverPosition  = useOrderTracking(orderId, trackingEnabled);
 
   async function handleCancel() {
     setCancelling(true);
@@ -407,27 +322,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
 
-        {/* Driver map */}
-        {driverPosition && currentStatus !== "DELIVERED" && currentStatus !== "CANCELLED" && (
-          <div className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl overflow-hidden">
-            <p className="px-5 py-3 text-xs font-semibold text-[var(--color-suido-4)] uppercase tracking-wide border-b border-[var(--color-suido-3)]/15" style={{ fontFamily: "var(--font-dm)" }}>
-              Ubicación del repartidor
-            </p>
-            <div style={{ height: "240px" }}>
-              <APIProvider apiKey={MAPS_KEY}>
-                <Map
-                  defaultCenter={driverPosition}
-                  defaultZoom={15}
-                  mapId="supido-tracking-map"
-                  gestureHandling="greedy"
-                  style={{ width: "100%", height: "100%" }}
-                >
-                  <AdvancedMarker position={driverPosition}>
-                    <Pin background="#a855f7" borderColor="#7c3aed" glyphColor="#fff" />
-                  </AdvancedMarker>
-                </Map>
-              </APIProvider>
-            </div>
+        {/* Live driver map — only while ON_THE_WAY and position available */}
+        {driverPosition && (
+          <div className="rounded-2xl overflow-hidden border border-[var(--color-suido-3)]/20" style={{ height: "240px" }}>
+            <APIProvider apiKey={MAPS_KEY}>
+              <Map
+                defaultCenter={driverPosition}
+                center={driverPosition}
+                defaultZoom={15}
+                mapId="supido-order-tracking"
+                gestureHandling="greedy"
+                style={{ width: "100%", height: "100%" }}
+              >
+                <AdvancedMarker position={driverPosition} title="Repartidor en camino">
+                  <BikePin />
+                </AdvancedMarker>
+              </Map>
+            </APIProvider>
           </div>
         )}
 
@@ -454,29 +365,44 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <h2 className="text-sm font-extrabold text-white mb-4 uppercase tracking-wide" style={{ fontFamily: "var(--font-syne)" }}>
             Detalle del pedido
           </h2>
-          <div className="flex flex-col gap-2 mb-4">
-            {receipt.items.map((item, i) => (
-              <div key={i} className="flex justify-between gap-3">
-                <span className="text-sm text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
-                  <span className="text-white font-semibold">{item.quantity}×</span> {item.name}
-                </span>
+
+          <div className="flex flex-col gap-2.5 mb-4">
+            {(receipt.items ?? []).map((item, i) => (
+              <div key={i} className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
+                    <span className="text-white font-semibold">{item.quantity}×</span>{" "}
+                    {item.menuItemName ?? item.name}
+                  </p>
+                  <p className="text-[0.7rem] text-[var(--color-suido-3)] mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>
+                    ${item.unitPrice.toFixed(2)} c/u
+                  </p>
+                  {item.notes && (
+                    <p className="text-[0.7rem] text-[var(--color-suido-3)] italic mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>{item.notes}</p>
+                  )}
+                </div>
                 <span className="text-sm text-white whitespace-nowrap" style={{ fontFamily: "var(--font-dm)" }}>
-                  ${(item.unitPrice * item.quantity).toFixed(2)}
+                  ${(item.subtotal ?? item.unitPrice * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
           <div className="flex flex-col gap-1.5 pt-4 border-t border-[var(--color-suido-3)]/15">
-            <ReceiptRow label="Subtotal"      value={`$${receipt.subtotal.toFixed(2)}`} />
-            {receipt.tip      > 0 && <ReceiptRow label="Propina"    value={`$${receipt.tip.toFixed(2)}`} />}
-            {receipt.discount > 0 && <ReceiptRow label="Descuento"  value={`−$${receipt.discount.toFixed(2)}`} accent />}
-            <div className="flex justify-between pt-2 border-t border-[var(--color-suido-3)]/15 mt-1">
-              <span className="text-white font-extrabold" style={{ fontFamily: "var(--font-syne)" }}>Total</span>
-              <span className="text-[var(--color-suido-accent)] font-extrabold" style={{ fontFamily: "var(--font-syne)" }}>
-                ${receipt.total.toFixed(2)}
-              </span>
-            </div>
-            <ReceiptRow label="Pago" value={receipt.paymentMethod === "CASH" ? "💵 Efectivo" : "💳 Tarjeta"} />
+            {receipt.subtotal  != null && <ReceiptRow label="Subtotal"  value={`$${receipt.subtotal.toFixed(2)}`} />}
+            {receipt.tip       != null && receipt.tip > 0 && <ReceiptRow label="Propina"   value={`$${receipt.tip.toFixed(2)}`} />}
+            {receipt.discount  != null && receipt.discount > 0 && <ReceiptRow label="Descuento" value={`−$${receipt.discount.toFixed(2)}`} accent />}
+            {receipt.total != null && (
+              <div className="flex justify-between pt-2 border-t border-[var(--color-suido-3)]/15 mt-1">
+                <span className="text-white font-extrabold" style={{ fontFamily: "var(--font-syne)" }}>Total</span>
+                <span className="text-[var(--color-suido-accent)] font-extrabold" style={{ fontFamily: "var(--font-syne)" }}>
+                  ${receipt.total.toFixed(2)}
+                </span>
+              </div>
+            )}
+            <ReceiptRow
+              label="Pago"
+              value={receipt.paymentMethod === "CASH" ? "💵 Efectivo" : "💳 Tarjeta"}
+            />
           </div>
         </div>
 
@@ -518,6 +444,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </p>
         )}
 
+        {/* Rating — only for delivered orders */}
+        {receipt.status === "DELIVERED" && (
+          <RatingSection
+            orderId={orderId}
+            deliveryPersonId={receipt.deliveryPersonId ?? null}
+          />
+        )}
+
         {/* Cancel */}
         {currentStatus === "PENDING" && (
           <button
@@ -544,6 +478,128 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="bg-[var(--color-suido-2)] rounded-xl px-4 py-3">
       <p className="text-[0.65rem] text-[var(--color-suido-4)] uppercase tracking-wide" style={{ fontFamily: "var(--font-dm)" }}>{label}</p>
       <p className="text-white font-semibold text-sm mt-0.5" style={{ fontFamily: "var(--font-syne)" }}>{value}</p>
+    </div>
+  );
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
+          className="text-2xl leading-none transition-transform hover:scale-110 focus:outline-none"
+          aria-label={`${star} estrella${star > 1 ? "s" : ""}`}
+        >
+          <span style={{ color: star <= (hovered || value) ? "#facc15" : "#3f3f5a" }}>★</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RatingSection({
+  orderId,
+  deliveryPersonId,
+}: {
+  orderId: number;
+  deliveryPersonId: number | null;
+}) {
+  const [existing, setExisting]         = useState<OrderRating[] | null>(null);
+  const [restaurantScore, setRest]      = useState(0);
+  const [driverScore, setDriver]        = useState(0);
+  const [submitting, setSubmitting]     = useState(false);
+  const [done, setDone]                 = useState(false);
+  const [err, setErr]                   = useState<string | null>(null);
+
+  useEffect(() => {
+    getRatingsForOrder(orderId).then(setExisting).catch(() => setExisting([]));
+  }, [orderId]);
+
+  if (existing === null) return null; // still loading
+
+  const ratedTypes       = new Set(existing.map((r) => r.type));
+  const needsRestaurant  = !ratedTypes.has("RESTAURANT");
+  const needsDriver      = deliveryPersonId !== null && !ratedTypes.has("DELIVERY_PERSON");
+
+  if ((!needsRestaurant && !needsDriver) || done) return null;
+
+  async function handleSubmit() {
+    const userId = getUserId();
+    if (!userId) return;
+    if (needsRestaurant && restaurantScore === 0) { setErr("Calificá el restaurante antes de enviar."); return; }
+    if (needsDriver     && driverScore    === 0) { setErr("Calificá al repartidor antes de enviar."); return; }
+    setErr(null);
+    setSubmitting(true);
+    try {
+      if (needsRestaurant) await submitRating({ orderId, ratedById: userId, type: "RESTAURANT",     score: restaurantScore });
+      if (needsDriver)     await submitRating({ orderId, ratedById: userId, type: "DELIVERY_PERSON", score: driverScore });
+      setDone(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error al enviar.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl p-6 flex flex-col gap-5">
+      <h2 className="text-sm font-extrabold text-white uppercase tracking-wide" style={{ fontFamily: "var(--font-syne)" }}>
+        Calificá tu pedido
+      </h2>
+
+      {needsRestaurant && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-[var(--color-suido-4)] uppercase tracking-wide" style={{ fontFamily: "var(--font-dm)" }}>Restaurante</p>
+          <StarPicker value={restaurantScore} onChange={setRest} />
+        </div>
+      )}
+
+      {needsDriver && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-[var(--color-suido-4)] uppercase tracking-wide" style={{ fontFamily: "var(--font-dm)" }}>Repartidor</p>
+          <StarPicker value={driverScore} onChange={setDriver} />
+        </div>
+      )}
+
+      {err && <p className="text-xs text-red-400" style={{ fontFamily: "var(--font-dm)" }}>{err}</p>}
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={submitting}
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-[var(--color-suido-accent)]/15 hover:bg-[var(--color-suido-accent)]/25 text-[var(--color-suido-accent)] border border-[var(--color-suido-accent)]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        style={{ fontFamily: "var(--font-dm)" }}
+      >
+        {submitting && <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+        {submitting ? "Enviando…" : "Enviar calificación"}
+      </button>
+    </div>
+  );
+}
+
+function BikePin() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", filter: "drop-shadow(0 2px 6px #4A1A9988)" }}>
+      <div style={{
+        background: "#7c3aed",
+        borderRadius: "50% 50% 50% 0",
+        transform: "rotate(-45deg)",
+        width: 40,
+        height: 40,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "2px solid #4A1A99",
+      }}>
+        <span style={{ transform: "rotate(45deg)", fontSize: 18, lineHeight: 1 }}>🛵</span>
+      </div>
+      <div style={{ width: 6, height: 6, background: "#7c3aed", borderRadius: "50%", marginTop: 2 }} />
     </div>
   );
 }

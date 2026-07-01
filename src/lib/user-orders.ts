@@ -38,22 +38,28 @@ export interface CreateOrderRequest {
 }
 
 export interface OrderReceiptItem {
-  name: string;
+  id?: number;
+  menuItemId?: number;
+  menuItemName: string;
+  name?: string;          // alias kept for compatibility
   quantity: number;
   unitPrice: number;
+  subtotal?: number;
+  notes?: string | null;
 }
 
 export interface OrderReceipt {
   orderId: number;
   restaurantName: string;
-  items: OrderReceiptItem[];
-  subtotal: number;
-  tip: number;
-  discount: number;
-  total: number;
-  paymentMethod: PaymentMethod;
+  items?: OrderReceiptItem[];
+  subtotal?: number;
+  tip?: number;
+  discount?: number;
+  total?: number;
+  paymentMethod?: PaymentMethod;
   status: OrderStatus;
   createdAt: string;
+  deliveryPersonId?: number | null;
 }
 
 export interface DeliveryStats {
@@ -97,7 +103,64 @@ export async function getOrderReceipt(orderId: number): Promise<OrderReceipt> {
   const res = await fetch(`${BASE}/api/orders/${orderId}/receipt`, {
     headers: authHeaders(),
   });
-  return unwrap<OrderReceipt>(res);
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? `Error ${res.status}`);
+  }
+  const json = await res.json();
+  // Response shape: { data: { order: {...}, payment: {...}, claims: [] } }
+  const data    = json?.data ?? json;
+  const order   = data?.order   ?? data;
+  const payment = data?.payment ?? null;
+
+  return {
+    orderId:         order.id,
+    restaurantName:  order.restaurant?.name ?? order.restaurantName ?? "",
+    status:          order.status,
+    createdAt:       order.createdAt,
+    items:           order.items ?? [],
+    subtotal:        order.subtotal,
+    tip:             order.tip,
+    discount:        order.discount,
+    total:           order.total,
+    paymentMethod:   (payment?.method ?? order.paymentMethod) as PaymentMethod | undefined,
+    deliveryPersonId: order.deliveryPersonId ?? null,
+  };
+}
+
+export interface OrderRating {
+  id: number;
+  orderId: number;
+  ratedById: number;
+  type: "RESTAURANT" | "DELIVERY_PERSON";
+  score: number;
+}
+
+export async function getRatingsForOrder(orderId: number): Promise<OrderRating[]> {
+  const res = await fetch(`${BASE}/api/ratings/order/${orderId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return [];
+  const json = await res.json();
+  const data = json?.data ?? json;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function submitRating(payload: {
+  orderId: number;
+  ratedById: number;
+  type: "RESTAURANT" | "DELIVERY_PERSON";
+  score: number;
+}): Promise<void> {
+  const res = await fetch(`${BASE}/api/ratings`, {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? "Error al enviar la calificación.");
+  }
 }
 
 export async function getDeliveryStats(orderId: number): Promise<DeliveryStats> {
@@ -108,18 +171,19 @@ export async function getDeliveryStats(orderId: number): Promise<DeliveryStats> 
 }
 
 export interface OrderTrackingData {
+  id?: number;
+  orderId?: number;
+  status?: string;
   latitude: number;
   longitude: number;
-  deliveryPersonId?: number;
-  updatedAt?: string;
+  recordedAt?: string;
 }
 
 export async function getOrderTracking(orderId: number): Promise<OrderTrackingData | null> {
   const res = await fetch(`${BASE}/api/order-tracking/order/${orderId}`, {
     headers: authHeaders(),
   });
-  if (res.status === 404) return null;
-  if (!res.ok) return null;
+  if (res.status === 404 || !res.ok) return null;
   const json = await res.json();
   return json?.data ?? json;
 }

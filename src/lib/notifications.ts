@@ -25,6 +25,18 @@ export interface Notification {
   read: boolean;
   sentAt: string;
   type?: string;
+  orderId?: number;
+  userId?: number;
+}
+
+export async function fetchUnreadNotifications(): Promise<Notification[]> {
+  const res = await fetch(`${BASE}/api/notifications/unread`, {
+    headers: authHeaders(),
+  });
+  const json = await unwrap<Notification[] | { content?: Notification[] }>(res);
+  if (Array.isArray(json)) return json;
+  const paged = json as { content?: Notification[] };
+  return Array.isArray(paged.content) ? paged.content : [];
 }
 
 export async function fetchNotifications(): Promise<Notification[]> {

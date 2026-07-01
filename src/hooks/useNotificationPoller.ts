@@ -26,7 +26,7 @@ export function useNotificationPoller(
       }
     }
 
-    poll(); // immediate first poll
+    poll();
     const id = setInterval(poll, intervalMs);
     return () => clearInterval(id);
   }, [enabled, intervalMs]);

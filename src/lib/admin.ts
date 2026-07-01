@@ -2,10 +2,24 @@ import { getToken } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL;
 
-function authHeaders(): Record<string, string> {
+function authHeaders(json = false): Record<string, string> {
   const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const h: Record<string, string> = {};
+  if (token) h.Authorization = `Bearer ${token}`;
+  if (json) h["Content-Type"] = "application/json";
+  return h;
 }
+
+async function unwrap<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? `Error ${res.status}`);
+  }
+  const json = await res.json();
+  return json?.data ?? json;
+}
+
+/* ─── Types ─── */
 
 export interface Restaurant {
   id: number;
@@ -36,6 +50,12 @@ export interface User {
   createdAt?: string;
 }
 
+export interface UserPage {
+  users: User[];
+  totalPages: number;
+  totalElements: number;
+}
+
 export interface DeliveryPerson {
   id: number;
   available: boolean;
@@ -44,14 +64,7 @@ export interface DeliveryPerson {
   [key: string]: unknown;
 }
 
-async function unwrap<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.message ?? `Error ${res.status}`);
-  }
-  const json = await res.json();
-  return json?.data ?? json;
-}
+/* ─── Restaurants ─── */
 
 export async function fetchAllRestaurants(): Promise<Restaurant[]> {
   const res = await fetch(`${BASE}/api/restaurants`, { headers: authHeaders() });
@@ -63,16 +76,16 @@ export async function fetchAllRestaurants(): Promise<Restaurant[]> {
       : [];
 }
 
-export async function createRestaurant(
-  data: Omit<Restaurant, "id">,
-): Promise<Restaurant> {
+export async function createRestaurant(data: Omit<Restaurant, "id">): Promise<Restaurant> {
   const res = await fetch(`${BASE}/api/restaurants`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: authHeaders(true),
     body: JSON.stringify(data),
   });
   return unwrap<Restaurant>(res);
 }
+
+/* ─── Menu items ─── */
 
 export async function createMenuItem(
   restaurantId: number,
@@ -80,17 +93,13 @@ export async function createMenuItem(
 ): Promise<MenuItem> {
   const res = await fetch(`${BASE}/api/restaurants/${restaurantId}/menu-items`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: authHeaders(true),
     body: JSON.stringify(data),
   });
   return unwrap<MenuItem>(res);
 }
 
-export interface UserPage {
-  users: User[];
-  totalPages: number;
-  totalElements: number;
-}
+/* ─── Users ─── */
 
 export async function fetchAllUsers(
   page = 0,
@@ -128,10 +137,19 @@ export interface UpdateUserRequest {
   role?: string;
 }
 
+export async function createUser(data: CreateUserRequest): Promise<User> {
+  const res = await fetch(`${BASE}/api/users`, {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify(data),
+  });
+  return unwrap<User>(res);
+}
+
 export async function updateUser(id: number, data: UpdateUserRequest): Promise<User> {
   const res = await fetch(`${BASE}/api/users/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: authHeaders(true),
     body: JSON.stringify(data),
   });
   return unwrap<User>(res);
@@ -140,7 +158,7 @@ export async function updateUser(id: number, data: UpdateUserRequest): Promise<U
 export async function changeUserRole(id: number, role: string): Promise<User> {
   const res = await fetch(`${BASE}/api/users/${id}/role`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: authHeaders(true),
     body: JSON.stringify({ role }),
   });
   return unwrap<User>(res);
@@ -157,23 +175,7 @@ export async function deleteUser(id: number): Promise<void> {
   }
 }
 
-export async function createUser(data: CreateUserRequest): Promise<User> {
-  const res = await fetch(`${BASE}/api/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  return unwrap<User>(res);
-}
-
-export async function createDeliveryPerson(userId: number): Promise<DeliveryPerson> {
-  const res = await fetch(`${BASE}/api/delivery-persons`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ userId, available: false }),
-  });
-  return unwrap<DeliveryPerson>(res);
-}
+/* ─── Delivery persons ─── */
 
 export async function fetchAllDeliveryPersons(): Promise<DeliveryPerson[]> {
   const res = await fetch(`${BASE}/api/delivery-persons`, { headers: authHeaders() });
@@ -183,4 +185,13 @@ export async function fetchAllDeliveryPersons(): Promise<DeliveryPerson[]> {
     : Array.isArray((json as { content?: DeliveryPerson[] }).content)
       ? (json as { content: DeliveryPerson[] }).content
       : [];
+}
+
+export async function createDeliveryPerson(userId: number): Promise<DeliveryPerson> {
+  const res = await fetch(`${BASE}/api/delivery-persons`, {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify({ userId, available: false }),
+  });
+  return unwrap<DeliveryPerson>(res);
 }
