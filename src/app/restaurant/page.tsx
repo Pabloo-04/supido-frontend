@@ -124,6 +124,56 @@ export default function RestaurantPage() {
           </div>
         )}
 
+        {/* Restaurant info card */}
+        {restaurant && (
+          <div className="bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl overflow-hidden mb-8">
+            <div className="flex flex-col sm:flex-row gap-0">
+              {restaurant.photoUrl && (
+                <div className="sm:w-48 h-36 sm:h-auto flex-shrink-0 overflow-hidden bg-[var(--color-suido-2)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={restaurant.photoUrl} alt={restaurant.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex-1 p-5 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h1 className="text-xl font-extrabold text-white" style={{ fontFamily: "var(--font-syne)" }}>
+                        {restaurant.name}
+                      </h1>
+                      <p className="text-xs text-[var(--color-suido-4)] mt-0.5" style={{ fontFamily: "var(--font-dm)" }}>
+                        {restaurant.category}{restaurant.address ? ` · ${restaurant.address}` : ""}
+                      </p>
+                    </div>
+                    {restaurant.averageRating != null && (
+                      <span className="text-xs font-semibold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2.5 py-0.5 flex-shrink-0" style={{ fontFamily: "var(--font-dm)" }}>
+                        ★ {restaurant.averageRating.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  {restaurant.openingTime && restaurant.closingTime && (
+                    <span className="text-xs text-[var(--color-suido-4)]" style={{ fontFamily: "var(--font-dm)" }}>
+                      🕐 {restaurant.openingTime.slice(0, 5)} – {restaurant.closingTime.slice(0, 5)}
+                    </span>
+                  )}
+                  <span
+                    className={`text-xs font-semibold border rounded-full px-2.5 py-0.5
+                      ${restaurant.isOpen
+                        ? "bg-green-500/15 text-green-400 border-green-500/25"
+                        : "bg-[var(--color-suido-2)] text-[var(--color-suido-3)] border-[var(--color-suido-3)]/20"
+                      }`}
+                    style={{ fontFamily: "var(--font-dm)" }}
+                  >
+                    {restaurant.isOpen ? "Abierto ahora" : "Cerrado ahora"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab bar */}
         <div className="flex gap-1 mb-8 bg-[var(--color-suido-1)] border border-[var(--color-suido-3)]/20 rounded-2xl p-1 w-fit">
           {TABS.map(({ id, label }) => (
