@@ -87,6 +87,26 @@ export async function createRestaurant(data: Omit<Restaurant, "id">): Promise<Re
   return unwrap<Restaurant>(res);
 }
 
+export async function updateRestaurant(id: number, data: Omit<Restaurant, "id">): Promise<Restaurant> {
+  const res = await fetch(`${BASE}/api/restaurants/${id}`, {
+    method: "PUT",
+    headers: authHeaders(true),
+    body: JSON.stringify(data),
+  });
+  return unwrap<Restaurant>(res);
+}
+
+export async function deleteRestaurant(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/api/restaurants/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? `Error ${res.status}`);
+  }
+}
+
 /* ─── Menu items ─── */
 
 export async function createMenuItem(
