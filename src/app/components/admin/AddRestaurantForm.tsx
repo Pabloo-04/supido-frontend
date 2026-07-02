@@ -15,6 +15,8 @@ const INITIAL = {
   openingTime: "",
   closingTime: "",
   photoUrl: "",
+  latitude: "",
+  longitude: "",
 };
 
 export default function AddRestaurantForm({ onCreated, onCancel }: Props) {
@@ -41,6 +43,8 @@ export default function AddRestaurantForm({ onCreated, onCancel }: Props) {
         openingTime: form.openingTime.trim() || undefined,
         closingTime: form.closingTime.trim() || undefined,
         photoUrl: form.photoUrl.trim() || undefined,
+        latitude: form.latitude !== "" ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude !== "" ? parseFloat(form.longitude) : undefined,
       });
       setForm(INITIAL);
       onCreated(created);
@@ -58,6 +62,8 @@ export default function AddRestaurantForm({ onCreated, onCancel }: Props) {
     { name: "openingTime", label: "Apertura",         placeholder: "09:00" },
     { name: "closingTime", label: "Cierre",           placeholder: "23:00" },
     { name: "photoUrl",    label: "URL de foto",      placeholder: "https://…" },
+    { name: "latitude",    label: "Latitud",          placeholder: "-34.6037" },
+    { name: "longitude",   label: "Longitud",         placeholder: "-58.3816" },
   ];
 
   return (

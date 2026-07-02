@@ -29,6 +29,8 @@ export interface Restaurant {
   openingTime?: string;
   closingTime?: string;
   photoUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface MenuItem {
