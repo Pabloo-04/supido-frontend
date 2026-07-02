@@ -54,7 +54,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [receipt, setReceipt]           = useState<OrderReceipt | null>(null);
   const [status, setStatus]             = useState<OrderStatus | null>(null);
   const [stats, setStats]               = useState<DeliveryStats | null>(null);
-  const [driverInitPos, setDriverInitPos] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
   const [cancelling, setCancelling]     = useState(false);
@@ -63,13 +62,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [showCancelled, setShowCancelled] = useState(false);
   const [showNearby, setShowNearby]     = useState(false);
   const [showRating, setShowRating]     = useState(false);
-  const [trackingActive, setTracking]   = useState(false);
 
   const statsPollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Live driver position from WebSocket
-  const wsPosition = useOrderTracking(orderId, trackingActive);
-  const driverPosition = wsPosition ?? driverInitPos;
 
   /* ── helpers ── */
 
@@ -96,9 +90,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const token = getToken();
     if (!token) { router.push("/login"); return; }
+  }, [router]);
 
-  // Driver position — REST initial fetch + WebSocket live updates
-  // Active for any status where a driver is or could be moving
   const TRACKING_STATUSES: OrderStatus[] = ["CONFIRMED", "PREPARING", "ON_THE_WAY"];
   const trackingEnabled = receipt?.status != null && TRACKING_STATUSES.includes(receipt.status);
   const driverPosition  = useOrderTracking(orderId, trackingEnabled);

@@ -49,16 +49,6 @@ export async function fetchNotifications(): Promise<Notification[]> {
   return Array.isArray(paged.content) ? paged.content : [];
 }
 
-export async function fetchUnreadNotifications(): Promise<Notification[]> {
-  const res = await fetch(`${BASE}/api/notifications/unread`, {
-    headers: authHeaders(),
-  });
-  const json = await unwrap<Notification[] | { content?: Notification[] }>(res);
-  if (Array.isArray(json)) return json;
-  const paged = json as { content?: Notification[] };
-  return Array.isArray(paged.content) ? paged.content : [];
-}
-
 export async function markNotificationRead(id: number): Promise<Notification> {
   const res = await fetch(`${BASE}/api/notifications/${id}/read`, {
     method: "PATCH",

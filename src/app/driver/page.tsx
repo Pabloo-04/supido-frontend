@@ -8,7 +8,6 @@ import { fetchDeliveryPersonByUserId, updateDeliveryPersonAvailability, type Del
 import { getActiveOrders } from "@/lib/driver-orders";
 import { fetchUnreadNotifications, markAllNotificationsRead, type Notification } from "@/lib/notifications";
 import CatFaceSVG from "../components/landing/CatFaceSVG";
-import AvailableOrders from "../components/driver/AvailableOrders";
 import ActiveOrders from "../components/driver/ActiveOrders";
 import ActiveDelivery from "../components/driver/ActiveDelivery";
 import DeliveredHistory from "../components/driver/DeliveredHistory";
@@ -262,15 +261,12 @@ export default function DriverPage() {
                   </button>
                 )}
 
-                {/* Available orders (when online) */}
-                {available
-                  ? <AvailableOrders onOrderAccepted={() => { checkActive(); setTab("active"); }} />
-                  : !activeOrderId && (
-                      <p className="text-center py-12 text-[var(--color-suido-3)] text-sm" style={{ fontFamily: "var(--font-dm)" }}>
-                        Conectate para empezar a recibir pedidos.
-                      </p>
-                    )
-                }
+                {/* Offline hint */}
+                {!available && !activeOrderId && (
+                  <p className="text-center py-12 text-[var(--color-suido-3)] text-sm" style={{ fontFamily: "var(--font-dm)" }}>
+                    Conectate para empezar a recibir pedidos.
+                  </p>
+                )}
               </section>
             )}
 

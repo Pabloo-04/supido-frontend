@@ -149,7 +149,7 @@ export default function OrdersPage() {
                       </span>
                     </div>
                     <p className="text-xs text-[var(--color-suido-4)] mt-1" style={{ fontFamily: "var(--font-dm)" }}>
-                      {new Date(order.createdAt).toLocaleString("es-AR")} · {order.paymentMethod === "CASH" ? "Efectivo" : "Tarjeta"}
+                      {new Date(order.createdAt).toLocaleString("es-AR")} · {order.paymentMethod === "CARD" ? "Tarjeta" : "Efectivo"}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,6 +19,14 @@ const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 const DEFAULT_CENTER = { lat: 13.690026, lng: -89.234408};
 
 export default function SetupAddressPage() {
+  return (
+    <Suspense>
+      <SetupAddressContent />
+    </Suspense>
+  );
+}
+
+function SetupAddressContent() {
   const router     = useRouter();
   const params     = useSearchParams();
   const nextRoute  = params.get("next") ?? "/restaurants";

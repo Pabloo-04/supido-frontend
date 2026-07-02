@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Supido ",
-  description: "The next level app",
+  title: "Supido — Delivery Veloz",
+  description: "Pedí comida y seguí tu entrega en tiempo real.",
+  icons: { icon: "/supido.png" },
 };
 
 export default function RootLayout({
