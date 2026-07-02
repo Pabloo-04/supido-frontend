@@ -132,9 +132,6 @@ function HistoryRow({
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className={`text-xs font-medium ${order.paymentMethod === "CASH" ? "text-yellow-400" : "text-blue-400"}`}>
-            {order.paymentMethod === "CASH" ? "💵" : "💳"}
-          </span>
           <span className="text-[var(--color-suido-accent)] font-extrabold text-sm" style={{ fontFamily: "var(--font-syne)" }}>
             ${order.total.toFixed(2)}
           </span>
